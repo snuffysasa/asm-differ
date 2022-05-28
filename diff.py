@@ -1371,7 +1371,7 @@ def dump_binary(
         end_addr = eval_int(end, "End address must be an integer expression.")
     else:
         end_addr = start_addr + config.max_function_size_bytes
-    objdump_flags = ["-Dz", "-bbinary"] + ["-EB" if config.arch.big_endian else "-EL"]
+    objdump_flags = ["-dz"] + ["-EB" if config.arch.big_endian else "-EL"]
     flags1 = [
         f"--start-address={start_addr + config.base_shift}",
         f"--stop-address={end_addr + config.base_shift}",
@@ -1450,7 +1450,8 @@ class AsmProcessorPPC(AsmProcessor):
     def process_reloc(self, row: str, prev: str) -> str:
         arch = self.config.arch
         assert any(
-            r in row for r in ["R_PPC_REL24", "R_PPC_ADDR16", "R_PPC_EMB_SDA21"]
+            r in row
+            for r in ["R_PPC_REL24", "R_PPC_ADDR16", "R_PPC_EMB_SDA21", "R_PPC_ADDR32"]
         ), f"unknown relocation type '{row}' for line '{prev}'"
         before, imm, after = parse_relocated_line(prev)
         repl = row.split()[-1]
