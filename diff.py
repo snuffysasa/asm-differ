@@ -1371,7 +1371,7 @@ def dump_binary(
         end_addr = eval_int(end, "End address must be an integer expression.")
     else:
         end_addr = start_addr + config.max_function_size_bytes
-    objdump_flags = ["-Dz", "-bbinary"] + ["-EB" if config.arch.big_endian else "-EL"]
+    objdump_flags = ["-dz"] + ["-EB" if config.arch.big_endian else "-EL"]
     flags1 = [
         f"--start-address={start_addr + config.base_shift}",
         f"--stop-address={end_addr + config.base_shift}",
@@ -1972,6 +1972,13 @@ def process(dump: str, config: Config) -> List[Line]:
         args = row_parts[1] if len(row_parts) >= 2 else ""
         row = mnemonic + "\t" + args.replace("\t", "  ")
 
+        if arch.name == "ppc":
+            print(row)
+            if mnemonic == "li":
+                mnemonic = "addi"
+                args_parts = args.split(",")
+                args = args_parts[0] + ",0," + args_parts[1]
+
         addr = ""
         if mnemonic in arch.instructions_with_address_immediates:
             row, addr = split_off_address(row)
@@ -2451,21 +2458,23 @@ def do_diff(lines1: List[Line], lines2: List[Line], config: Config) -> Diff:
                 out1 += Text(address1, address_imm_fmt)
                 out2 += Text(address2, address_imm_fmt)
         elif line1 and line2:
+            print(line1.scorable_line, "  &&  ", line2.scorable_line)
+            print(line1.diff_row, " && ", line2.diff_row)
             line1_parts = [line1.mnemonic] + line1.original.split("\t")[1].split(",")
             line2_parts = [line2.mnemonic] + line2.original.split("\t")[1].split(",")
             ### check each part of the line for innequality, but ignore parts with match everything symbol
-            for i in range(len(line1_parts)):
-                # If line2 (right side) is a match to any symbol case
-                if imm_matches_everything(line2_parts[i], config.arch):
-                    # And line1 (left side) had a relocation, then ignore this mismatch
-                    if line1.relocation_occured:
-                        continue
-                if line1_parts[i] != line2_parts[i]:
-                    line_prefix = "|"
-                    line_color1 = line_color2 = sym_color = BasicFormat.DIFF_CHANGE
-                    out1 = out1.reformat(line_color1)
-                    out2 = out2.reformat(line_color2)
-                    break
+            # for i in range(len(line1_parts)):
+            #     # If line2 (right side) is a match to any symbol case
+            #     if imm_matches_everything(line2_parts[i], config.arch):
+            #         # And line1 (left side) had a relocation, then ignore this mismatch
+            #         if line1.relocation_occured:
+            #             continue
+            #     if line1_parts[i] != line2_parts[i]:
+            #         line_prefix = "|"
+            #         line_color1 = line_color2 = sym_color = BasicFormat.DIFF_CHANGE
+            #         out1 = out1.reformat(line_color1)
+            #         out2 = out2.reformat(line_color2)
+            #         break
         elif line1:
             line_prefix = "<"
             line_color1 = sym_color = BasicFormat.DIFF_REMOVE
